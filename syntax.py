@@ -25,19 +25,21 @@ OPERATOR_PRIORITY = {
 READ_DATA_PRIORITY = 4
 
 
-class Node:
+class LexemNode:
     OPERATOR = "NODE_OPERATOR"
     DATA = "NODE_DATA"
     GROUP = "NODE_GROUP"
 
-    def __init__(self, name, left_child=None, right_child=None, weight=0, priority=0):
+    def __init__(self, name, left_child=None, right_child=None, weight=0, priority=0, lexem=None):
         self._data = name
         self.left_child = left_child
         self.right_child = right_child
         self._weight = weight
         self.priority = priority
 
-        self.type = Node.OPERATOR if name in OPERATOR_PRIORITY else Node.DATA
+        self._lexem = lexem
+
+        self.type = LexemNode.OPERATOR if name in OPERATOR_PRIORITY else LexemNode.DATA
     @property
     def name(self):
         res = [
@@ -46,7 +48,7 @@ class Node:
             f"{self.right_child.name if self.right_child else ''}"
         ]
         res = " ".join(res)
-        if self.type is Node.GROUP:
+        if self.type is LexemNode.GROUP:
             res = f"({res})"
         return res
 
@@ -74,6 +76,7 @@ class Node:
             name=lexem.token,
             weight=weight,
             priority=priority,
+            lexem=lexem
         )
 
     def __repr__(self):
@@ -86,10 +89,10 @@ class SyntaxAnalyzer:
     def get_node(self, lexem):
         if isinstance(lexem, LexemGroup):
             node = self.parse_group(lexem)
-            node.type = Node.GROUP
+            node.type = LexemNode.GROUP
             node.priority = READ_DATA_PRIORITY
             return node
-        node = Node.create_from_lexem(lexem)
+        node = LexemNode.create_from_lexem(lexem)
         return node
 
 
@@ -103,11 +106,11 @@ class SyntaxAnalyzer:
         for i, node in enumerate(node_list):
             if node._data == "/":
                 nodes.append(self.get_node(Lexem("*", "OPERATOR")))
-                nodes.append(self.get_node(Lexem(1, "NUMBER")))
+                nodes.append(self.get_node(Lexem("1", "NUMBER")))
 
             if node._data == "-":
                 nodes.append(self.get_node(Lexem("+", "OPERATOR")))
-                nodes.append(self.get_node(Lexem(0, "NUMBER")))
+                nodes.append(self.get_node(Lexem("0", "NUMBER")))
 
             nodes.append(node)
 
@@ -172,7 +175,7 @@ class SyntaxAnalyzer:
         for index_dir, central_node_dir in enumerate(node_list):
 
             weight_dir += central_node_dir.weight
-            if weight_dir >= sum_weight / 2 and central_node_dir.priority == min_priority and central_node_dir.type == Node.OPERATOR:
+            if weight_dir >= sum_weight / 2 and central_node_dir.priority == min_priority and central_node_dir.type == LexemNode.OPERATOR:
                 break
 
         weight_rev = 0
@@ -180,44 +183,14 @@ class SyntaxAnalyzer:
 
             index_rev = len(node_list) - 1- i
             weight_rev += central_node_rev.weight
-            if weight_rev >= sum_weight / 2 and central_node_rev.priority == min_priority and central_node_rev.type == Node.OPERATOR:
+            if weight_rev >= sum_weight / 2 and central_node_rev.priority == min_priority and central_node_rev.type == LexemNode.OPERATOR:
                 break
 
-        dir_criteria = (weight_dir - (sum_weight / 2)) * (1000 * int(central_node_dir.type != Node.OPERATOR))
-        rev_criteria = (weight_rev - (sum_weight / 2)) * (1000 * int(central_node_rev.type != Node.OPERATOR))
+        dir_criteria = (weight_dir - (sum_weight / 2)) * (1000 * int(central_node_dir.type != LexemNode.OPERATOR))
+        rev_criteria = (weight_rev - (sum_weight / 2)) * (1000 * int(central_node_rev.type != LexemNode.OPERATOR))
 
         index = index_rev if rev_criteria < dir_criteria else index_dir
         return index
-
-class BracketsOpener:
-
-    def max_depth(self, root_node):
-        if not(root_node.right_child and root_node.left_child):
-            return 0
-
-        return max(self.max_depth(root_node.right_child), self.max_depth(root_node.left_child)) + 1
-
-    def open_brackets(self, root_node):
-        while self.max_depth(root_node) > 1:
-            root_node = self.open_brackets_step(root_node)
-
-    def open_brackets_step(self, root_node):
-        if not(root_node.right_child and root_node.left_child):
-            return [root_node]
-        node_list = []
-        if root_node._data == '+' or root_node._data == '-':
-            node_list.extend(self.open_brackets(root_node.left_child))
-
-            node_list.append(Node(
-                root_node._data,
-                weight=OPERATOR_WEIGHT.get(root_node._data, 0),
-                priority=OPERATOR_PRIORITY.get(root_node._data, 0),
-            ))
-            node_list.extend(self.open_brackets(root_node.right_child))
-
-        # if root_node._data == '*':
-
-        return node_list
 
 
 

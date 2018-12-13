@@ -1,6 +1,6 @@
 # розкриття дужок, конвейєр зі статичним тактом
 from lexem import LexemAnalyser, LexemGroup
-from syntax import SyntaxAnalyzer, BracketsOpener
+from syntax import SyntaxAnalyzer
 
 from copy import copy
 
@@ -9,10 +9,13 @@ from copy import copy
 
 
 if __name__ == "__main__":
-    qwe = '1 / (2 + 3) * 4 + (a + b) * (5 + (5 + 7 * (8  + 9))) - a'
+    # qwe = '1 / (2 + 3) * 4 + (a + b) * (5 + (5 + 7 * (8  + 9))) - a'
     # qwe = '1 / (2 + 3) * 4 '
     # qwe = '1 + (2 - (3 + 4))'
+    # qwe = '(1 + 2)'
     # qwe = '(1 + 2 ) * (4 - 5)'
+    # qwe = '(1 + 2 ) * (4 - 5)'
+    qwe = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
     # qwe = input("input expression: ")
     lexem_analyzer = LexemAnalyser()
     lexems = lexem_analyzer.detect_lexems(qwe)
@@ -21,8 +24,20 @@ if __name__ == "__main__":
 
 
     sa = SyntaxAnalyzer()
-    syntax_tree = sa.parse_group(lexem_group)
-    sa.print_tree(syntax_tree)
+    lexems_tree = sa.parse_group(lexem_group)
+
+
+
+    sa.print_tree(lexems_tree)
+
+    from syntax_analyse import SyntaxTree
+    st = SyntaxTree()
+    syntax_tree = st.from_lexem_tree(lexems_tree)
+
+    opened = st.open_brackets(syntax_tree)
+
+
+    print(opened)
 
     # bo = BracketsOpener()
     # max_depth = bo.max_depth(syntax_tree)
