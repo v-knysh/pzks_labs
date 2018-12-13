@@ -17,6 +17,9 @@ if __name__ == "__main__":
     # qwe = '(1 + 2 ) * (4 - 5)'
     # qwe = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
     # qwe = input("input expression: ")
+
+    print(input_data)
+
     lexem_analyzer = LexemAnalyser()
     lexems = lexem_analyzer.detect_lexems(input_data)
 
@@ -37,7 +40,23 @@ if __name__ == "__main__":
     opened = st.regroup_children(syntax_tree)
 
 
-    print(opened)
+    new_str = str(opened)
+    print(new_str)
+    lexem_analyzer = LexemAnalyser()
+    lexems = lexem_analyzer.detect_lexems(new_str)
+
+    lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
+
+
+    sa = SyntaxAnalyzer()
+    lexems_tree = sa.parse_group(lexem_group)
+
+
+
+    sa.print_tree(lexems_tree)
+
+
+
 
     # bo = BracketsOpener()
     # max_depth = bo.max_depth(syntax_tree)

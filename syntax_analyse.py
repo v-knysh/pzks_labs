@@ -65,7 +65,7 @@ class DataNode(BaseNode):
         return []
 
     def __repr__(self):
-        return f"`{self.data}`"
+        return f"{self.data}"
 
 
 class GroupNode(BaseNode):
@@ -144,9 +144,9 @@ class MultiplyNode(GroupNode):
         self.division_group= self.remove_redundant(self.division_group)
 
     def __str__(self):
-        mul_part = '*'.join([str(s) for s in self.multiplication_group])
-        div_part = f"/ ({'*'.join([str(s) for s in self.division_group])})" if self.division_group != [self.dummy] else ""
-        return f"[{mul_part} {div_part}]"
+        mul_part = ' * '.join([str(s) for s in self.multiplication_group])
+        div_part = f"/ ({' * '.join([str(s) for s in self.division_group])})" if self.division_group != [self.dummy] else ""
+        return f"({mul_part} {div_part})"
 
 
 class SumNode(GroupNode):
@@ -187,8 +187,8 @@ class SumNode(GroupNode):
         self.negative_group = self.remove_redundant(self.negative_group)
 
     def __str__(self):
-        pos_part = '+'.join([str(s) for s in self.positive_group])
-        neg_part = f" - ({'-'.join([str(s) for s in self.negative_group])})" if self.negative_group!= [self.dummy] else ""
+        pos_part = ' + '.join([str(s) for s in self.positive_group])
+        neg_part = f" - ({' + '.join([str(s) for s in self.negative_group])})" if self.negative_group!= [self.dummy] else ""
         return f"({pos_part} {neg_part})"
 
     # mul_part = '*'.join([str(s) for s in self.multiplication_group])
