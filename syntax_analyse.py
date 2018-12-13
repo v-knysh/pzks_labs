@@ -1,9 +1,10 @@
 from syntax import LexemNode
 from lexem import VariableLexem, NumberLexem, OperatorLexem
 
+from itertools import product, chain
 
 class BaseNode:
-    def __init__(self, node=None, data=None, *args, **kwargs):
+    def __init__(self, data=None, *args, **kwargs):
         self.left_child = None
         self.right_child = None
         self.children = []
@@ -32,7 +33,6 @@ class Node(BaseNode):
             klass = OperationNode
 
         return klass(
-            node=lexem_node,
             data=lexem_node._lexem.token,
         )
 
@@ -41,40 +41,53 @@ class OperationNode(BaseNode):
     pass
 
 class DataNode(BaseNode):
-    def __init__(self, node=None, data=None, *args, **kwargs):
-        super(DataNode, self).__init__(node, data, *args, **kwargs)
+    def __init__(self, data=None, *args, **kwargs):
+        super(DataNode, self).__init__(data, *args, **kwargs)
         self.data = data
 
-    # @property
-    # def positive_group(self):
-    #     return [self]
-    # @property
-    # def negative_group(self):
-    #     return []
-    # @property
-    # def multiplication_group(self):
-    #     return [self]
-    # @property
-    # def division_group(self):
-    #     return []
+    def __eq__(self, other):
+        return (
+            isinstance(other, BaseNode) and
+            self.data == other.data
+        )
+
+    @property
+    def positive_group(self):
+        return [self]
+    @property
+    def negative_group(self):
+        return []
+    @property
+    def multiplication_group(self):
+        return [self]
+    @property
+    def division_group(self):
+        return []
 
     def __repr__(self):
-        return f"<{self.data}>"
+        return f"`{self.data}`"
 
 
 class GroupNode(BaseNode):
     operation = "_"
-    def __init__(self, node, data, *args, **kwargs):
-        super(GroupNode, self).__init__(node, data, *args, **kwargs)
+    dummy = DataNode(data="0")
+
+    def __init__(self, data, *args, **kwargs):
+        super(GroupNode, self).__init__(data, *args, **kwargs)
 
         self.left_children = []
         self.right_children = []
-        self.dummy = DataNode(data="0")
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, GroupNode) and
+            self.left_children == other.left_children and
+            self.right_children == other.right_children
+        )
 
     def remove_redundant(self, lst, redundant=0):
         redundant = self.dummy.data
         lst_new = []
-        redundant_node = None
         for d_node in lst:
             if d_node.data != redundant:
                 lst_new.append(d_node)
@@ -84,15 +97,20 @@ class GroupNode(BaseNode):
         lst.extend(lst_new)
         return lst
 
+    def regroup_operations(self):
+        return self
+
 
 class MultiplyNode(GroupNode):
     operation = "*"
-    def __init__(self, node, data, *args, **kwargs):
-        super(MultiplyNode, self).__init__(node, data, *args, **kwargs)
+    dummy = DataNode(data="1")
+    killer = DataNode(data="0")
+
+    def __init__(self, data=None, *args, **kwargs):
+        super(MultiplyNode, self).__init__(data, *args, **kwargs)
         self.multiplication_group = self.left_children
         self.division_group= self.right_children
 
-        self.dummy = DataNode(data="1")
 
         self.left_children.append(self.dummy)
         self.right_children.append(self.dummy)
@@ -100,92 +118,125 @@ class MultiplyNode(GroupNode):
     @property
     def positive_group(self):
         return [self]
+
     @property
     def negative_group(self):
         return []
 
     def add_children(self, operation, left_node, right_node):
         if operation == "*":
-            if isinstance(left_node, MultiplyNode):
-                self.multiplication_group.extend(left_node.multiplication_group)
-                self.division_group.extend(left_node.division_group)
-            else:
-                self.multiplication_group.append(left_node)
+            self.multiplication_group.extend(left_node.multiplication_group)
+            self.division_group.extend(left_node.division_group)
 
-            if isinstance(right_node, MultiplyNode):
-                self.multiplication_group.extend(right_node.multiplication_group)
-                self.division_group.extend(right_node.division_group)
-            else:
-                self.multiplication_group.append(right_node)
+            self.multiplication_group.extend(right_node.multiplication_group)
+            self.division_group.extend(right_node.division_group)
+
 
         elif operation == "/":
-            if isinstance(left_node, MultiplyNode):
-                self.multiplication_group.extend(left_node.division_group)
-                self.division_group.extend(left_node.multiplication_group)
-            else:
-                self.multiplication_group.append(left_node)
-                # self.division_group.append(left_node)
+            self.multiplication_group.extend(left_node.division_group)
+            self.division_group.extend(left_node.multiplication_group)
 
-            if isinstance(right_node, MultiplyNode):
-                self.multiplication_group.extend(right_node.division_group)
-                self.division_group.extend(right_node.multiplication_group)
-            else:
-                self.division_group.append(right_node)
+            self.multiplication_group.extend(right_node.division_group)
+            self.division_group.extend(right_node.multiplication_group)
+
 
         self.multiplication_group = self.remove_redundant(self.multiplication_group)
         self.division_group= self.remove_redundant(self.division_group)
 
     def __str__(self):
-        return f"[({'*'.join([str(s) for s in self.multiplication_group])}) / ({'*'.join([str(s) for s in self.division_group])})]"
-
+        mul_part = '*'.join([str(s) for s in self.multiplication_group])
+        div_part = f"/ ({'*'.join([str(s) for s in self.division_group])})" if self.division_group != [self.dummy] else ""
+        return f"[{mul_part} {div_part}]"
 
 
 class SumNode(GroupNode):
     operation = "+"
-    def __init__(self, node, data, *args, **kwargs):
-        super(SumNode, self).__init__(node, data, *args, **kwargs)
+    dummy = DataNode(data="0")
+
+
+
+    def __init__(self, data=None, *args, **kwargs):
+        super(SumNode, self).__init__(data, *args, **kwargs)
         self.positive_group = self.left_children
         self.negative_group= self.right_children
 
-        self.dummy = DataNode(data="0")
 
         self.left_children.append(self.dummy)
         self.right_children.append(self.dummy)
 
 
+    # def add_children_sum(self):
 
     def add_children(self, operation, left_node, right_node):
         if operation == "+":
-            if isinstance(left_node, SumNode):
-                self.positive_group.extend(left_node.positive_group)
-                self.negative_group.extend(left_node.negative_group)
-            else:
-                self.positive_group.append(left_node)
+            self.positive_group.extend(left_node.positive_group)
+            self.negative_group.extend(left_node.negative_group)
 
-            if isinstance(right_node, SumNode):
-                self.positive_group.extend(right_node.positive_group)
-                self.negative_group.extend(right_node.negative_group)
-            else:
-                self.positive_group.append(right_node)
+            self.positive_group.extend(right_node.positive_group)
+            self.negative_group.extend(right_node.negative_group)
+
 
         elif operation == "-":
-            if isinstance(left_node, SumNode):
-                self.positive_group.extend(left_node.negative_group)
-                self.negative_group.extend(left_node.positive_group)
-            else:
-                self.positive_group.append(left_node)
+            self.positive_group.extend(left_node.negative_group)
+            self.negative_group.extend(left_node.positive_group)
 
-            if isinstance(right_node, SumNode):
-                self.positive_group.extend(right_node.negative_group)
-                self.negative_group.extend(right_node.positive_group)
-            else:
-                self.negative_group.append(right_node)
+            self.positive_group.extend(right_node.negative_group)
+            self.negative_group.extend(right_node.positive_group)
 
         self.positive_group = self.remove_redundant(self.positive_group)
         self.negative_group = self.remove_redundant(self.negative_group)
 
     def __str__(self):
-        return f"({'+'.join([str(s) for s in self.positive_group])} - {'-'.join([str(s) for s in self.negative_group])})"
+        pos_part = '+'.join([str(s) for s in self.positive_group])
+        neg_part = f" - ({'-'.join([str(s) for s in self.negative_group])})" if self.negative_group!= [self.dummy] else ""
+        return f"({pos_part} {neg_part})"
+
+    # mul_part = '*'.join([str(s) for s in self.multiplication_group])
+    # div_part = f"/ ({'*'.join([str(s) for s in self.division_group])})" if self.division_group != [self.dummy] else ""
+    # return f"[{mul_part} {div_part}]"
+
+
+class SumRegroupNode(SumNode):
+    def add_children(self, operation, left_node, right_node):
+
+        if operation == "*":
+
+            left_pos = left_node.positive_group
+            right_pos = right_node.positive_group
+
+            left_neg = left_node.negative_group
+            right_neg = right_node.negative_group
+
+            pos_nodes = []
+            for l, r in chain(product(left_pos, right_pos), product(left_neg, right_neg)):
+                if l == MultiplyNode.killer or r == MultiplyNode.killer:
+                    continue
+
+                node = MultiplyNode(data="*")
+
+                node.add_children("*", l, r)
+                pos_nodes.append(node)
+
+            neg_nodes = []
+            for l, r in chain(product(left_pos, right_neg), product(left_neg, right_pos)):
+                if l == MultiplyNode.killer or r == MultiplyNode.killer:
+                    continue
+
+                node = MultiplyNode(data="*")
+                node.add_children("*", l, r)
+                neg_nodes.append(node)
+
+            self.positive_group.extend(pos_nodes)
+            self.negative_group.extend(neg_nodes)
+
+            self.remove_redundant(self.positive_group)
+            self.remove_redundant(self.negative_group)
+
+
+
+
+
+
 
 OPERATION_NODES = {
     "+": SumNode,
@@ -212,12 +263,10 @@ class SyntaxTree:
         node.left_child = left_node
         node.right_child = right_node
 
-        # self.open_brackets(node)
-
         return node
 
 
-    def open_brackets(self, root_node):
+    def regroup_children(self, root_node):
 
         left_node = root_node.left_child
         right_node = root_node.right_child
@@ -225,52 +274,26 @@ class SyntaxTree:
         if not (left_node or right_node):
             return root_node
 
-        left_node = self.open_brackets(left_node)
-        right_node = self.open_brackets(right_node)
+        left_node = self.regroup_children(left_node)
+        right_node = self.regroup_children(right_node)
 
-        # if (isinstance(right_node, DataNode) and isinstance(left_node, DataNode)):
-
-        NodeClass = OPERATION_NODES.get(root_node.data)
-        node = NodeClass(root_node, root_node.data)
+        NodeClass = self.get_node_class(root_node, left_node, right_node)
+        node = NodeClass(root_node.data)
         node.add_children(root_node.data, left_node, right_node)
-        return node
 
+        regrouped = node.regroup_operations()
 
-
-        return root_node
-
-
-
+        return regrouped
 
 
 
 
-# class BracketsOpener:
-#
-#     def max_depth(self, root_node):
-#         if not(root_node.right_child and root_node.left_child):
-#             return 0
-#
-#         return max(self.max_depth(root_node.right_child), self.max_depth(root_node.left_child)) + 1
-#
-#     def open_brackets(self, root_node):
-#         while self.max_depth(root_node) > 1:
-#             root_node = self.open_brackets_step(root_node)
-#
-#     # def open_brackets_step(self, root_node):
-    #     if not(root_node.right_child and root_node.left_child):
-    #         return [root_node]
-    #     node_list = []
-    #     if root_node._data == '+' or root_node._data == '-':
-    #         node_list.extend(self.open_brackets(root_node.left_child))
-    #
-    #         node_list.append(LexemNode(
-    #             root_node._data,
-    #             weight=OPERATOR_WEIGHT.get(root_node._data, 0),
-    #             priority=OPERATOR_PRIORITY.get(root_node._data, 0),
-    #         ))
-    #         node_list.extend(self.open_brackets(root_node.right_child))
-    #
-    #     # if root_node._data == '*':
-    #
-    #     return node_list
+    def get_node_class(self, root_node, left_node, right_node):
+        if root_node.data in ['+', '-']:
+            return SumNode
+
+        if isinstance(right_node, SumNode) or isinstance(left_node, SumNode):
+            return SumRegroupNode
+
+        return MultiplyNode
+

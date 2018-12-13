@@ -9,16 +9,16 @@ from copy import copy
 
 
 if __name__ == "__main__":
-    # qwe = '1 / (2 + 3) * 4 + (a + b) * (5 + (5 + 7 * (8  + 9))) - a'
+    input_data = '1 * (2 + 3) * 4 + (a - b) * (5 + (5 + 7 * (8  + 9))) - a'
     # qwe = '1 / (2 + 3) * 4 '
     # qwe = '1 + (2 - (3 + 4))'
-    # qwe = '(1 + 2)'
+    # qwe = '(4 + 2 * 3) * 5'
     # qwe = '(1 + 2 ) * (4 - 5)'
     # qwe = '(1 + 2 ) * (4 - 5)'
-    qwe = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
+    # qwe = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
     # qwe = input("input expression: ")
     lexem_analyzer = LexemAnalyser()
-    lexems = lexem_analyzer.detect_lexems(qwe)
+    lexems = lexem_analyzer.detect_lexems(input_data)
 
     lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     st = SyntaxTree()
     syntax_tree = st.from_lexem_tree(lexems_tree)
 
-    opened = st.open_brackets(syntax_tree)
+    opened = st.regroup_children(syntax_tree)
 
 
     print(opened)
