@@ -1,6 +1,7 @@
 # розкриття дужок, конвейєр зі статичним тактом
 from lexem import LexemAnalyser, LexemGroup
-from syntax import SyntaxAnalyzer
+from balancer import BalanceAnalyzer
+from planner import Planner
 
 from copy import copy
 
@@ -9,14 +10,14 @@ from copy import copy
 
 
 if __name__ == "__main__":
-    input_data = '1 * (2 + 3) * 4 + (a - b) * (5 + (5 + 7 * (8  + 9))) - a'
-    # qwe = '1 / (2 + 3) * 4 '
-    # qwe = '1 + (2 - (3 + 4))'
-    # qwe = '(4 + 2 * 3) * 5'
-    # qwe = '(1 + 2 ) * (4 - 5)'
-    # qwe = '(1 + 2 ) * (4 - 5)'
-    # qwe = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
-    # qwe = input("input expression: ")
+    # input_data = '1 * (2 + 3) * 4 + (1 - 2) * (5 + (5 + 7 * (8  + 9))) - 8'
+    # input_data = '1 / (2 + 3) * 4 '
+    # input_data = '1 + (2 - (3 + 4))'
+    # input_data = '(4 + 2 * 3) * 5'
+    # input_data = '(1 + 2 )'
+    input_data = '(1 + 2 ) * (4 + 5)'
+    # input_data = '(1 + ((2 - 3) + (1 - 3)) - (0 - 1 + (2 + 4))) - (4 - 5)'
+    # input_data = input("input expression: ")
 
     print(input_data)
 
@@ -26,16 +27,16 @@ if __name__ == "__main__":
     lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
 
 
-    sa = SyntaxAnalyzer()
+    sa = BalanceAnalyzer()
     lexems_tree = sa.parse_group(lexem_group)
 
 
 
     sa.print_tree(lexems_tree)
 
-    from syntax_analyse import SyntaxTree
-    st = SyntaxTree()
-    syntax_tree = st.from_lexem_tree(lexems_tree)
+    from regrouper import RegroupAnalyzer
+    st = RegroupAnalyzer()
+    syntax_tree = st.from_balancer_tree(lexems_tree)
 
     opened = st.regroup_children(syntax_tree)
 
@@ -48,8 +49,13 @@ if __name__ == "__main__":
     lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
 
 
-    sa = SyntaxAnalyzer()
+    sa = BalanceAnalyzer()
     lexems_tree = sa.parse_group(lexem_group)
+
+    p = Planner(lexems_tree)
+    p.prepare()
+
+
 
 
 

@@ -25,7 +25,7 @@ OPERATOR_PRIORITY = {
 READ_DATA_PRIORITY = 4
 
 
-class LexemNode:
+class BalancerNode:
     OPERATOR = "NODE_OPERATOR"
     DATA = "NODE_DATA"
     GROUP = "NODE_GROUP"
@@ -39,7 +39,7 @@ class LexemNode:
 
         self._lexem = lexem
 
-        self.type = LexemNode.OPERATOR if name in OPERATOR_PRIORITY else LexemNode.DATA
+        self.type = BalancerNode.OPERATOR if name in OPERATOR_PRIORITY else BalancerNode.DATA
     @property
     def name(self):
         res = [
@@ -48,7 +48,7 @@ class LexemNode:
             f"{self.right_child.name if self.right_child else ''}"
         ]
         res = " ".join(res)
-        if self.type is LexemNode.GROUP:
+        if self.type is BalancerNode.GROUP:
             res = f"({res})"
         return res
 
@@ -82,17 +82,17 @@ class LexemNode:
     def __repr__(self):
         return f"{self.name} ({self.weight})"
 
-class SyntaxAnalyzer:
+class BalanceAnalyzer:
     def __init__(self):
         pass
 
     def get_node(self, lexem):
         if isinstance(lexem, LexemGroup):
             node = self.parse_group(lexem)
-            node.type = LexemNode.GROUP
+            node.type = BalancerNode.GROUP
             node.priority = READ_DATA_PRIORITY
             return node
-        node = LexemNode.create_from_lexem(lexem)
+        node = BalancerNode.create_from_lexem(lexem)
         return node
 
 
@@ -175,7 +175,7 @@ class SyntaxAnalyzer:
         for index_dir, central_node_dir in enumerate(node_list):
 
             weight_dir += central_node_dir.weight
-            if weight_dir >= sum_weight / 2 and central_node_dir.priority == min_priority and central_node_dir.type == LexemNode.OPERATOR:
+            if weight_dir >= sum_weight / 2 and central_node_dir.priority == min_priority and central_node_dir.type == BalancerNode.OPERATOR:
                 break
 
         weight_rev = 0
@@ -183,11 +183,11 @@ class SyntaxAnalyzer:
 
             index_rev = len(node_list) - 1- i
             weight_rev += central_node_rev.weight
-            if weight_rev >= sum_weight / 2 and central_node_rev.priority == min_priority and central_node_rev.type == LexemNode.OPERATOR:
+            if weight_rev >= sum_weight / 2 and central_node_rev.priority == min_priority and central_node_rev.type == BalancerNode.OPERATOR:
                 break
 
-        dir_criteria = (weight_dir - (sum_weight / 2)) * (1000 * int(central_node_dir.type != LexemNode.OPERATOR))
-        rev_criteria = (weight_rev - (sum_weight / 2)) * (1000 * int(central_node_rev.type != LexemNode.OPERATOR))
+        dir_criteria = (weight_dir - (sum_weight / 2)) * (1000 * int(central_node_dir.type != BalancerNode.OPERATOR))
+        rev_criteria = (weight_rev - (sum_weight / 2)) * (1000 * int(central_node_rev.type != BalancerNode.OPERATOR))
 
         index = index_rev if rev_criteria < dir_criteria else index_dir
         return index

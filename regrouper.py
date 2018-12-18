@@ -1,4 +1,4 @@
-from syntax import LexemNode
+from balancer import BalancerNode
 from lexem import VariableLexem, NumberLexem, OperatorLexem
 
 from itertools import product, chain
@@ -245,11 +245,11 @@ OPERATION_NODES = {
     '/': MultiplyNode,
 }
 
-class SyntaxTree:
+class RegroupAnalyzer:
     def __init__(self):
         pass
 
-    def from_lexem_tree(self, root_node):
+    def from_balancer_tree(self, root_node):
 
         node = Node.from_lexem_node(root_node)
 
@@ -257,8 +257,8 @@ class SyntaxTree:
             return node
 
 
-        left_node = self.from_lexem_tree(root_node.left_child)
-        right_node = self.from_lexem_tree(root_node.right_child)
+        left_node = self.from_balancer_tree(root_node.left_child)
+        right_node = self.from_balancer_tree(root_node.right_child)
 
         node.left_child = left_node
         node.right_child = right_node
