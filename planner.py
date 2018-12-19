@@ -9,7 +9,7 @@ from balancer import (
     OPERATOR_WEIGHT
 )
 
-COLUMN_WIDTH = 10
+COLUMN_WIDTH = 15
 
 class Planner:
     def __init__(self, proc=None, layers=1):
@@ -198,7 +198,7 @@ class PipelineCpu:
                     self.cores[0].task = task
 
             print(f"{time:03d}: {self.cores_str()}")
-            time += task.weight
+            time += self.operation_weight
 
         max_time = time
         print(f"max_time: {max_time}")
@@ -225,5 +225,5 @@ class Core:
         if not self.task:
             return "_" * COLUMN_WIDTH
 
-        s = f"__{self.task.value}: {self.task.id}"
+        s = f"__{self.task.value}: (id={self.task.id:02d})"
         return f"{s}{'_' * (COLUMN_WIDTH - len(s))}"
