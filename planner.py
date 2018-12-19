@@ -1,10 +1,22 @@
-from balancer import READ_WEIGHT, PLUS_WEIGHT, MINUS_WEIGHT, MUL_WEIGHT, DIV_WEIGHT, BalancerNode
+from collections import defaultdict
 
+from balancer import (
+    READ_WEIGHT,
+    PLUS_WEIGHT,
+    MINUS_WEIGHT,
+    MUL_WEIGHT,
+    DIV_WEIGHT,
+    OPERATOR_WEIGHT
+)
+
+COLUMN_WIDTH = 10
 
 class Planner:
-    def __init__(self, proc=None):
+    def __init__(self, proc=None, layers=1):
         self.tree = None
-        self.proc = proc
+        # self.proc = Proc(layers)
+        # self.queues = [Queue() for i in range(layers)]
+        self.proc = PipelineCpu(layers)
         self.operations = {}
         self.task_id = 0
 
@@ -17,10 +29,6 @@ class Planner:
 
         operation_node = OperationNodeFab(self.task_id, root_node)
 
-        # if root_node.right_child.type != LexemNode.OPERATOR and root_node.left_child.type != LexemNode.OPERATOR:
-        #     operation_node.left = Data(root_node.left_child._data)
-        #     operation_node.right = Data(root_node.right_child._data)
-        #     return operation_node
         if isinstance(operation_node, Data):
             return operation_node
 
@@ -35,6 +43,34 @@ class Planner:
 
         return operation_node
 
+    def enqueue_tasks(self):
+        next_load_operation_value = None
+
+        while True:
+            ready_ops = [o for o in self.operations.values() if o.is_ready]
+            ready_ops.sort(key=lambda o: o.id)
+            if not ready_ops:
+                break
+
+            next_load_ops = [o for o in ready_ops if o.value == next_load_operation_value]
+            next_load_operation_changed = not bool(next_load_ops)
+
+            if next_load_operation_changed:
+
+                ops_counter = defaultdict(int)
+                for o in ready_ops:
+                    ops_counter[o.value] += 1
+                next_load_operation_value = max(ops_counter.items(), key=lambda x: x[1])[0]
+                print(f"switched to '{next_load_operation_value}'")
+                next_load_ops = [o for o in ready_ops if o.value == next_load_operation_value]
+
+            next_op = next_load_ops.pop(0)
+            self.proc.load(next_op)
+            print(f"load process {next_op.id}: {next_op.value} {next_op.node}")
+            next_op.is_done = True
+
+        self.proc.run()
+
 
 
 class Operation:
@@ -44,11 +80,21 @@ class Operation:
         self.node = node
         self.left = None
         self.right = None
-        self._ready = False
+        self._done = False
 
     @property
-    def ready(self):
-        return self.left.ready and self.right.ready
+    def is_ready(self):
+        return (not self.is_done) and self.left.is_done and self.right.is_done
+
+    @property
+    def is_done(self):
+        return self._done and self.left.is_done and self.right.is_done
+
+    @is_done.setter
+    def is_done(self, value):
+        self._done = value
+
+
 
 class PlusOperation(Operation):
     value = "+"
@@ -74,7 +120,11 @@ class Data(Operation):
         self.weight = READ_WEIGHT
 
     @property
-    def ready(self):
+    def is_ready(self):
+        return True
+
+    @property
+    def is_done(self):
         return True
 
 class OperationNodeFab(Operation):
@@ -90,19 +140,90 @@ class OperationNodeFab(Operation):
         OperationKlass = OperationNodeFab.operations.get(operator, Data)
         return OperationKlass(id, node, *args, **kwargs)
 
+#
+# class Queue():
+#     def __init__(self):
+#         self._queue = []
+#
+#     def enqueue_task(self, task):
+#         for i in range(task.weight):
+#             self._queue.append(task)
 
 
 
 
+class PipelineCpu:
+    def __init__(self, layers):
+        self.cores = [Core() for i in range(layers)]
+        self.queue = []
+
+    @property
+    def operation_type(self):
+        for c in self.cores:
+            if c.task:
+                return c.task.value
+        return None
+    
+    @property
+    def operation_weight(self):
+        return OPERATOR_WEIGHT.get(self.operation_type, 0)
 
 
-class Proc:
-    def __init__(self):
-        self.cores = []
+
+    @property
+    def is_free(self):
+        return not bool(self.operation_type)
+
+    def load(self, task):
+        self.queue.append(task)
+
+    def rotate_tasks(self):
+        if self.cores[-1].task:
+            self.cores[-1].task.is_done = True
+
+        for i in reversed(range(len(self.cores) - 1)):
+            self.cores[i+1].task = self.cores[i].task
+        self.cores[0].task = None
+
+    def run(self):
+        time = 0
+        while self.queue or not self.is_free:
+            self.rotate_tasks()
+            
+            
+            if self.queue:
+                task = self.queue[0]
+                if task.value == self.operation_type or self.is_free:
+                    self.queue.pop(0)
+                    self.cores[0].task = task
+
+            print(f"{time:03d}: {self.cores_str()}")
+            time += task.weight
+
+        max_time = time
+        print(f"max_time: {max_time}")
+
+
+
+    def cores_str(self):
+        return "|".join([str(c) for c in self.cores])
+
+
+
+
 
 class Core:
     def __init__(self):
-        self.query = Query()
+        self.working = False
+        self.task = None
 
-class Query:
-    pass
+    @property
+    def is_working(self):
+        return bool(self.task)
+
+    def __str__(self):
+        if not self.task:
+            return "_" * COLUMN_WIDTH
+
+        s = f"__{self.task.value}: {self.task.id}"
+        return f"{s}{'_' * (COLUMN_WIDTH - len(s))}"

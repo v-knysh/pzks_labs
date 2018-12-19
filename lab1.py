@@ -1,7 +1,9 @@
 # розкриття дужок, конвейєр зі статичним тактом
+
 from lexem import LexemAnalyser, LexemGroup
 from balancer import BalanceAnalyzer
 from planner import Planner
+from regrouper import RegroupAnalyzer
 
 from copy import copy
 
@@ -27,16 +29,15 @@ if __name__ == "__main__":
     lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
 
 
-    sa = BalanceAnalyzer()
-    lexems_tree = sa.parse_group(lexem_group)
+    ba = BalanceAnalyzer()
+    balanced_tree = ba.parse_group(lexem_group)
 
 
 
-    sa.print_tree(lexems_tree)
+    ba.print_tree(balanced_tree)
 
-    from regrouper import RegroupAnalyzer
     st = RegroupAnalyzer()
-    syntax_tree = st.from_balancer_tree(lexems_tree)
+    syntax_tree = st.from_balancer_tree(balanced_tree)
 
     opened = st.regroup_children(syntax_tree)
 
@@ -49,17 +50,18 @@ if __name__ == "__main__":
     lexem_group = lexem_analyzer.extract_bracket_groups(lexems)
 
 
-    sa = BalanceAnalyzer()
-    lexems_tree = sa.parse_group(lexem_group)
+    ba = BalanceAnalyzer()
+    balanced_tree = ba.parse_group(lexem_group)
 
-    p = Planner(lexems_tree)
-    p.prepare()
-
-
-
+    p = Planner(layers=3)
+    p.prepare(balanced_tree)
+    p.enqueue_tasks()
 
 
-    sa.print_tree(lexems_tree)
+
+
+
+    ba.print_tree(balanced_tree)
 
 
 
